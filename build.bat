@@ -7,9 +7,9 @@ REM 安装依赖
 echo 安装依赖...
 uv sync
 
-REM 使用PyInstaller打包
-echo 使用PyInstaller打包...
-uv run pyinstaller --name="送货单对账单工具" ^
+REM 使用PyInstaller打包GUI版本
+echo 使用PyInstaller打包GUI版本...
+uv run pyinstaller --name="送货单对账单工具-GUI" ^
     --windowed ^
     --onefile ^
     --add-data "merge_delivery_orders.py;." ^

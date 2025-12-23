@@ -52,13 +52,26 @@ jobs:
         shell: bash
 
       # 步骤5：使用PyInstaller打包
-      - name: 打包程序
+      - name: 打包程序 (Windows)
+        if: matrix.os == 'windows-latest'
         run: |
           uv run pyinstaller --name="送货单对账单工具" \
             --onefile \
+            --windowed \
+            --add-data "merge_delivery_orders.py;." \
+            --clean \
+            gui_app.py
+        shell: cmd
+
+      - name: 打包程序 (macOS/Linux)
+        if: matrix.os != 'windows-latest'
+        run: |
+          uv run pyinstaller --name="送货单对账单工具" \
+            --onefile \
+            --windowed \
             --add-data "merge_delivery_orders.py:." \
             --clean \
-            simple_gui.py
+            gui_app.py
         shell: bash
 
       # 步骤6：重命名输出文件（Windows）
