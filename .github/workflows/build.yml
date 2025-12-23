@@ -1,0 +1,126 @@
+name: 构建多平台可执行文件
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送v开头的标签时触发（如v1.0, v1.1）
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    name: 构建 ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            output_name: 送货单对账单工具.exe
+            artifact_name: windows
+          - os: macos-latest
+            output_name: 送货单对账单工具
+            artifact_name: macos
+          - os: ubuntu-latest
+            output_name: 送货单对账单工具
+            artifact_name: linux
+
+    steps:
+      # 步骤1：检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 步骤2：安装Python
+      - name: 安装Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # 步骤3：安装uv
+      - name: 安装uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+        shell: bash
+
+      # 步骤4：安装依赖
+      - name: 安装项目依赖
+        run: |
+          uv sync
+        shell: bash
+
+      # 步骤5：使用PyInstaller打包
+      - name: 打包程序
+        run: |
+          uv run pyinstaller --name="送货单对账单工具" \
+            --onefile \
+            --add-data "merge_delivery_orders.py:." \
+            --clean \
+            simple_gui.py
+        shell: bash
+
+      # 步骤6：重命名输出文件（Windows）
+      - name: 准备发布文件 (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          move "dist\送货单对账单工具.exe" "dist\送货单对账单工具-Windows.exe"
+        shell: cmd
+
+      # 步骤6：重命名输出文件（macOS）
+      - name: 准备发布文件 (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          mv "dist/送货单对账单工具" "dist/送货单对账单工具-macOS"
+          chmod +x "dist/送货单对账单工具-macOS"
+
+      # 步骤6：重命名输出文件（Linux）
+      - name: 准备发布文件 (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mv "dist/送货单对账单工具" "dist/送货单对账单工具-Linux"
+          chmod +x "dist/送货单对账单工具-Linux"
+
+      # 步骤7：上传构建产物
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/*
+
+  # 创建Release并上传所有平台的文件
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 创建Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/windows/*
+            artifacts/macos/*
+            artifacts/linux/*
+          body: |
+            ## 送货单对账单工具 发布
+
+            ### 下载说明
+            - **Windows用户**：下载 `送货单对账单工具-Windows.exe`
+            - **macOS用户**：下载 `送货单对账单工具-macOS`
+            - **Linux用户**：下载 `送货单对账单工具-Linux`
+
+            ### 使用方法
+            1. 下载对应系统的文件
+            2. 双击运行（macOS/Linux需要先赋予执行权限）
+            3. 按提示输入文件夹路径
+
+            ### 更新内容
+            - 自动生成送货单对账单
+            - 支持多客户、多月份
+            - 透视分析数据
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
