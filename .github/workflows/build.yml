@@ -40,13 +40,29 @@ jobs:
           python-version: '3.13'
 
       # 步骤3：安装uv
-      - name: 安装uv
+      - name: 安装uv (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          irm https://astral.sh/uv/install.ps1 | iex
+          echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: powershell
+
+      - name: 安装uv (macOS/Linux)
+        if: matrix.os != 'windows-latest'
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         shell: bash
 
       # 步骤4：安装依赖
-      - name: 安装项目依赖
+      - name: 安装项目依赖 (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          uv sync
+        shell: powershell
+
+      - name: 安装项目依赖 (macOS/Linux)
+        if: matrix.os != 'windows-latest'
         run: |
           uv sync
         shell: bash
@@ -56,7 +72,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           uv run pyinstaller --name="送货单对账单工具" --onefile --windowed --add-data "merge_delivery_orders.py;." --clean gui_app.py
-        shell: cmd
+        shell: powershell
 
       - name: 打包程序 (macOS/Linux)
         if: matrix.os != 'windows-latest'
@@ -73,8 +89,8 @@ jobs:
       - name: 准备发布文件 (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          move "dist\送货单对账单工具.exe" "dist\送货单对账单工具-Windows.exe"
-        shell: cmd
+          Move-Item "dist\送货单对账单工具.exe" "dist\送货单对账单工具-Windows.exe"
+        shell: powershell
 
       # 步骤6：重命名输出文件（macOS）
       - name: 准备发布文件 (macOS)
