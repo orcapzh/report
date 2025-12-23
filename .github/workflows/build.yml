@@ -6,6 +6,9 @@ on:
       - 'v*'  # 当推送v开头的标签时触发（如v1.0, v1.1）
   workflow_dispatch:  # 允许手动触发
 
+permissions:
+  contents: write  # 允许写入内容（创建Release需要）
+
 jobs:
   build:
     name: 构建 ${{ matrix.os }}
